@@ -1,0 +1,10 @@
+{
+  "name": "Apex Ridge Rally",
+  "short_name": "Apex Rally",
+  "description": "Realistic 3D alpine rally racing game built for Android touchscreens and desktop.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0d1015",
+  "theme_color": "#e05a2b"
+}

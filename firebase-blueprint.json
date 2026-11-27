@@ -1,0 +1,132 @@
+{
+  "entities": {
+    "DriverProfile": {
+      "title": "DriverProfile",
+      "description": "Career rally telemetry and best stage metrics for an authenticated driver.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the driver."
+        },
+        "driverName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Short display name shown in driver profile."
+        },
+        "racesCompleted": {
+          "type": "integer",
+          "description": "Total completed rally stages."
+        },
+        "bestLapMs": {
+          "type": "integer",
+          "description": "Personal best single-lap time in milliseconds."
+        },
+        "topSpeedKmh": {
+          "type": "integer",
+          "description": "Highest recorded top speed in km/h."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "uid",
+        "driverName",
+        "racesCompleted",
+        "bestLapMs",
+        "topSpeedKmh",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StageRecord": {
+      "title": "StageRecord",
+      "description": "Completed rally stage run recorded by an authenticated driver.",
+      "type": "object",
+      "properties": {
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the record owner."
+        },
+        "driverName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Display name at the time of the run."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["race", "time_trial"],
+          "description": "Event format."
+        },
+        "totalLaps": {
+          "type": "integer",
+          "description": "Stage lap count (2 or 3)."
+        },
+        "position": {
+          "type": "integer",
+          "description": "Finishing position (1 to 3)."
+        },
+        "totalTimeMs": {
+          "type": "integer",
+          "description": "Total stage completion time in milliseconds."
+        },
+        "bestLapMs": {
+          "type": "integer",
+          "description": "Fastest lap time in milliseconds during the run."
+        },
+        "topSpeedKmh": {
+          "type": "integer",
+          "description": "Peak speed in km/h during the run."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "ownerUid",
+        "driverName",
+        "mode",
+        "totalLaps",
+        "position",
+        "totalTimeMs",
+        "bestLapMs",
+        "topSpeedKmh",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/drivers/{driverId}": {
+      "schema": { "$ref": "#/entities/DriverProfile" },
+      "description": "Private owner-scoped driver career telemetry document."
+    },
+    "/stageRecords/{recordId}": {
+      "schema": { "$ref": "#/entities/StageRecord" },
+      "description": "Owner-scoped completed rally stage run logs."
+    }
+  }
+}

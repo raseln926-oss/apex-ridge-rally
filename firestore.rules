@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidDriverProfile(data, driverId) {
+      return data.keys().hasAll([
+          'uid', 'driverName', 'racesCompleted', 'bestLapMs', 'topSpeedKmh', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'driverName', 'racesCompleted', 'bestLapMs', 'topSpeedKmh', 'createdAt', 'updatedAt'
+        ])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128
+        && data.uid == driverId && data.uid == request.auth.uid
+        && data.driverName is string && data.driverName.size() >= 1 && data.driverName.size() <= 40
+        && data.racesCompleted is int && data.racesCompleted >= 0 && data.racesCompleted <= 1000000
+        && data.bestLapMs is int && data.bestLapMs >= 0 && data.bestLapMs <= 1800000
+        && data.topSpeedKmh is int && data.topSpeedKmh >= 0 && data.topSpeedKmh <= 400
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidStageRecord(data) {
+      return data.keys().hasAll([
+          'ownerUid', 'driverName', 'mode', 'totalLaps', 'position',
+          'totalTimeMs', 'bestLapMs', 'topSpeedKmh', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerUid', 'driverName', 'mode', 'totalLaps', 'position',
+          'totalTimeMs', 'bestLapMs', 'topSpeedKmh', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128
+        && data.ownerUid == request.auth.uid
+        && data.driverName is string && data.driverName.size() >= 1 && data.driverName.size() <= 40
+        && data.mode is string && (data.mode == 'race' || data.mode == 'time_trial')
+        && data.totalLaps is int && (data.totalLaps == 2 || data.totalLaps == 3)
+        && data.position is int && data.position >= 1 && data.position <= 3
+        && data.totalTimeMs is int && data.totalTimeMs >= 1000 && data.totalTimeMs <= 3600000
+        && data.bestLapMs is int && data.bestLapMs >= 1000 && data.bestLapMs <= 1800000
+        && data.topSpeedKmh is int && data.topSpeedKmh >= 1 && data.topSpeedKmh <= 400
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /drivers/{driverId} {
+      allow get: if isValidId(driverId) && isOwner(driverId);
+      allow list: if false;
+      allow create: if isVerified()
+        && isValidId(driverId)
+        && isOwner(driverId)
+        && isValidDriverProfile(incoming(), driverId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified()
+        && isValidId(driverId)
+        && isOwner(driverId)
+        && isValidDriverProfile(incoming(), driverId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().racesCompleted >= existing().racesCompleted
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'driverName', 'racesCompleted', 'bestLapMs', 'topSpeedKmh', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /stageRecords/{recordId} {
+      allow get: if isValidId(recordId) && isSignedIn() && existing().ownerUid == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isVerified()
+        && isValidId(recordId)
+        && isValidStageRecord(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerified()
+        && isValidId(recordId)
+        && existing().ownerUid == request.auth.uid
+        && isValidStageRecord(incoming())
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'driverName', 'position', 'totalTimeMs', 'bestLapMs', 'topSpeedKmh', 'updatedAt'
+        ]);
+      allow delete: if isVerified() && isValidId(recordId) && existing().ownerUid == request.auth.uid;
+    }
+  }
+}
